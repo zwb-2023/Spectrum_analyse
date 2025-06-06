@@ -394,10 +394,3 @@ def leave_one_out_cross_validation(X, y, model):
     plt.show()
     
     return mean_accuracy
-
-# Example usage (assuming you have already defined your model and data):
-# 假设 X 是特征数据，y 是标签数据
-X = reflectance_snv  # 使用之前计算的反射率数据
-y = labels  # 使用之前定义的标签
-model = SVC(C=100, kernel='linear', gamma='auto')  # 定义SVM模型
-mean_accuracy = leave_one_out_cross_validation(X, y, model)
