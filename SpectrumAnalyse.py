@@ -277,3 +277,127 @@ def plot_selected_features(wavelength, spectrum , selected_features, best_scores
     
     # 显示图像
     plt.show()
+
+
+
+def k_fold_cross_validation(X, y, model, n_splits=5):
+    """
+    使用五折交叉验证训练模型，并绘制混淆矩阵。
+    
+    参数:
+    X : numpy array
+        特征矩阵 (n_samples, n_features)
+    y : numpy array or list
+        标签对应的特征矩阵
+    model : sklearn model
+        要训练的机器学习模型
+    n_splits : int
+        交叉验证的折数，默认为5
+    """
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    Y_pred = []
+    Y_test = []
+
+    # 进行五折交叉验证
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # 训练模型
+        model.fit(X_train, y_train)
+
+        # 预测
+        y_pred = model.predict(X_test)
+
+        # 汇总结果
+        Y_pred.extend(y_pred)
+        Y_test.extend(y_test)
+
+    # 计算混淆矩阵
+    cm = confusion_matrix(Y_test, Y_pred)
+
+    # 获取唯一的标签
+    unique_labels = np.unique(y)
+
+    # 绘制混淆矩阵
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.show()
+
+    # 计算并打印准确率
+    accuracy = accuracy_score(Y_test, Y_pred)
+    print(f"五折交叉验证的平均准确率: {accuracy:.2f}")
+
+
+
+
+
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+import numpy as np
+import matplotlib.pyplot as plt
+from SpectrumAnalyse import leave_one_out_cross_validation
+def leave_one_out_cross_validation(X, y, model):
+    """
+    Perform Leave-One-Out Cross Validation (LOO CV) on the given dataset.
+    
+    Parameters:
+    X : numpy array
+        Feature matrix (n_samples, n_features)
+    y : numpy array or list
+        Labels corresponding to the feature matrix
+    model : sklearn model
+        A machine learning model (e.g., SVM) to train and predict
+    
+    Returns:
+    float
+        The mean accuracy of the model across all leave-one-out iterations
+    """
+    accuracies = []
+    Y_pred = []
+    Y_test = []
+    
+    # Perform Leave-One-Out Cross Validation
+    for i in range(len(y)):
+        # Split the data into train and test sets
+        X_train, X_test = np.delete(X, i, axis=0), X[i, :]
+        y_train, y_test = np.delete(y, i), y[i]
+        
+        # Train the model
+        model.fit(X_train, y_train)
+        
+        # Make predictions
+        y_pred = model.predict(X_test.reshape(1, -1))
+        
+        # Store the predictions and true labels
+        Y_pred.append(y_pred)
+        Y_test.append(y_test)
+    
+    # Calculate accuracy
+    accuracy = accuracy_score(Y_test, Y_pred)
+    accuracies.append(accuracy)
+    
+    # Mean accuracy
+    mean_accuracy = np.mean(accuracies)
+    print(f"留一交叉验证的平均准确率: {mean_accuracy:.2f}")
+    
+    # Confusion matrix
+    cm = confusion_matrix(Y_test, Y_pred)
+    
+    # Get unique labels for plotting
+    unique_labels = np.unique(y)
+    
+    # Plot the confusion matrix
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
+    disp.plot(cmap=plt.cm.Blues)
+    plt.title("Confusion Matrix")
+    plt.show()
+    
+    return mean_accuracy
+
+# Example usage (assuming you have already defined your model and data):
+# 假设 X 是特征数据，y 是标签数据
+X = reflectance_snv  # 使用之前计算的反射率数据
+y = labels  # 使用之前定义的标签
+model = SVC(C=100, kernel='linear', gamma='auto')  # 定义SVM模型
+mean_accuracy = leave_one_out_cross_validation(X, y, model)
