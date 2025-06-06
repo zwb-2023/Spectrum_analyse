@@ -336,7 +336,7 @@ def k_fold_cross_validation(X, y, model, n_splits=5):
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
 import numpy as np
 import matplotlib.pyplot as plt
-from SpectrumAnalyse import leave_one_out_cross_validation
+
 def leave_one_out_cross_validation(X, y, model):
     """
     Perform Leave-One-Out Cross Validation (LOO CV) on the given dataset.
