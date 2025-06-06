@@ -323,12 +323,11 @@ def k_fold_cross_validation(X, y, model, n_splits=5):
     # 绘制混淆矩阵
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
     disp.plot(cmap=plt.cm.Blues)
-    plt.title("Confusion Matrix")
+    accuracy = accuracy_score(Y_test, Y_pred)
+    plt.title(f"Accuracy: {accuracy:.2f}")
     plt.show()
 
-    # 计算并打印准确率
-    accuracy = accuracy_score(Y_test, Y_pred)
-    print(f"五折交叉验证的平均准确率: {accuracy:.2f}")
+
 
 
 
@@ -391,7 +390,8 @@ def leave_one_out_cross_validation(X, y, model):
     # Plot the confusion matrix
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
     disp.plot(cmap=plt.cm.Blues)
-    plt.title("Confusion Matrix")
+
+    plt.title(f"Accuracy: {accuracy:.2f}")
     plt.show()
     
     return mean_accuracy
