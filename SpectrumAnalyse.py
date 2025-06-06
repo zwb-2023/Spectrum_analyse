@@ -42,7 +42,7 @@ def plot_duplicate_data(category, split_datas, x, type='all'):
     import matplotlib.font_manager as fm
     # 设置中文显示
     plt.rcParams['font.sans-serif'] = ['SimHei']  # 选择合适的中文字体，这里使用了黑体作为示例
-    
+    plt.rcParams['axes.unicode_minus'] = False  # 使负号能够正常显示
     # 动态生成颜色
     num_colors = len(category)
     cmap = plt.cm.get_cmap('tab20', num_colors)  # 使用 'tab20' 调色板，并指定颜色数量
@@ -279,6 +279,7 @@ def plot_selected_features(wavelength, spectrum , selected_features, best_scores
     plt.show()
 
 
+from sklearn.model_selection import KFold
 
 def k_fold_cross_validation(X, y, model, n_splits=5):
     """
