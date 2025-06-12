@@ -77,23 +77,100 @@ def plot_duplicate_data(category, split_datas, x, type='all'):
     plt.legend(sorted_handles, sorted_labels, loc='upper left', bbox_to_anchor=(1, 1))
     plt.show()
 
+def plot_duplicate_data_both(category, split_datas, x ):
+    import matplotlib.font_manager as fm
+    # 设置中文显示
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 选择合适的中文字体，这里使用了黑体作为示例
+    plt.rcParams['axes.unicode_minus'] = False  # 使负号能够正常显示
+    # 动态生成颜色
+    num_colors = len(category)
+    cmap = plt.cm.get_cmap('tab20', num_colors)  # 使用 'tab20' 调色板，并指定颜色数量
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))  # 创建1行2列的子图
+    
+    # 绘制 `mean` 类型的图像
+    for i in range(len(category)):
+        y = split_datas[i]
+        color = cmap(i)  # 从调色板中取颜色
+        axes[0].plot(x, np.mean(y.transpose(), axis=1), color=color, label=category[i])
+
+    axes[0].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
+    axes[0].set_title('Mean of Reflectivity')  # 设置标题
+
+    # 绘制 `all` 类型的图像
+    for i in range(len(category)):
+        y = split_datas[i]
+        color = cmap(i)  # 从调色板中取颜色
+        axes[1].plot(x, y.transpose(), color=color, label=category[i])
+
+    axes[1].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
+    axes[1].set_title('All of Reflectivity')  # 设置标题
+
+    # 合并相同名称和颜色的图例
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique_labels = set(labels)
+    unique_handles = [handles[labels.index(label)] for label in unique_labels]
+    
+    # 按标签顺序排序
+    sorted_labels_handles = sorted(set(zip(unique_labels, unique_handles)), key=lambda x: x[0])
+    sorted_labels, sorted_handles = zip(*sorted_labels_handles)
+    # 在右侧添加统一的图例
+    fig.legend(sorted_handles, sorted_labels, loc='upper left', bbox_to_anchor=(1, 1))
+
+    # 调整布局，使得图例不与图像重叠
+    plt.tight_layout()
+    plt.show()
+
+#——————————————————————预处理————————————————————————————
 
 
-#——————————————————————标准化处理————————————————————————————
-
+def msc(ori_specs):
+    """多元散射校正"""
+    me = np.mean(ori_specs, axis=0)
+    msc_specs = np.zeros_like(ori_specs)
+    for i in range(ori_specs.shape[0]):
+        poly = np.polyfit(me, ori_specs[i], 1)
+        msc_specs[i] = (ori_specs[i] - poly[1]) / poly[0]
+    return msc_specs
 
 def snv(ori_specs):
-    """标准正态化
-    对多个光谱数据进行标准正态化校正，理想光谱采用的是平均光谱
-    @param ori_specs: Numpy数组,原始光谱,形状为[n, spec]
-    @return: 标准正态变化后的光谱
-    """
-    # Define v0.1.1-a new array and populate it with the corrected data
+    """标准正态化"""
     snv_specs = np.zeros_like(ori_specs)
     for i in range(ori_specs.shape[0]):
-        # Apply correction
-        snv_specs[i, :] = (ori_specs[i, :] - np.mean(ori_specs[i, :])) / np.std(ori_specs[i, :])
+        snv_specs[i] = (ori_specs[i] - np.mean(ori_specs[i])) / np.std(ori_specs[i])
     return snv_specs
+
+def CT(data):
+    """均值中心化"""
+    for i in range(data.shape[1]):
+        mean_val = np.mean(data[:, i])
+        data[:, i] = data[:, i] - mean_val
+    return data
+
+def MA(data, WSZ=11):
+    """移动平均平滑"""
+    for i in range(data.shape[0]):
+        out0 = np.convolve(data[i], np.ones(WSZ, dtype=int), 'valid') / WSZ
+        r = np.arange(1, WSZ - 1, 2)
+        start = np.cumsum(data[i, :WSZ - 1])[::2] / r
+        stop = (np.cumsum(data[i, :-WSZ:-1])[::2] / r)[::-1]
+        data[i] = np.concatenate((start, out0, stop))
+    return data
+
+def SG(data, w=11, p=2):
+    """SG平滑"""
+    from scipy.signal import savgol_filter
+    return savgol_filter(data, w, p)
+
+def none(data):
+    """无预处理"""
+    return data
+
+def pca(data):
+    """PCA降维"""
+    from sklearn.decomposition import PCA
+    pca = PCA(n_components=25)
+    return pca.fit_transform(data)
 
 
 #————————————————————————计算差异性——————————————————————————————
