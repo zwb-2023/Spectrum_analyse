@@ -2,7 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import matplotlib.font_manager as fm
 from collections import Counter
-
+# 设置中文显示
+import matplotlib.pyplot as plt
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 使用黑体字体
+plt.rcParams['axes.unicode_minus'] = False  # 正常显示负号
 #——————————————————————绘图可视化————————————————————————————
 
 def split_data(labels, datas):
@@ -280,8 +283,8 @@ def plot_selected_features(wavelength, spectrum , selected_features, best_scores
 
 
 from sklearn.model_selection import KFold
-
-def k_fold_cross_validation(X, y, model, n_splits=5):
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+def k_fold_cross_validation(X, y, model, n_splits=5 , random_state = 42 , show = True):
     """
     使用五折交叉验证训练模型，并绘制混淆矩阵。
     
@@ -295,7 +298,7 @@ def k_fold_cross_validation(X, y, model, n_splits=5):
     n_splits : int
         交叉验证的折数，默认为5
     """
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state = random_state)
     Y_pred = []
     Y_test = []
 
@@ -314,18 +317,22 @@ def k_fold_cross_validation(X, y, model, n_splits=5):
         Y_pred.extend(y_pred)
         Y_test.extend(y_test)
 
-    # 计算混淆矩阵
-    cm = confusion_matrix(Y_test, Y_pred)
-
-    # 获取唯一的标签
-    unique_labels = np.unique(y)
-
-    # 绘制混淆矩阵
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
-    disp.plot(cmap=plt.cm.Blues)
     accuracy = accuracy_score(Y_test, Y_pred)
-    plt.title(f"Accuracy: {accuracy:.2f}")
-    plt.show()
+
+    if show:
+      # 计算混淆矩阵
+      cm = confusion_matrix(Y_test, Y_pred)
+
+      # 获取唯一的标签
+      unique_labels = np.unique(y)
+
+      # 绘制混淆矩阵
+      disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
+      disp.plot(cmap=plt.cm.Blues)
+      plt.title(f"Accuracy: {accuracy:.2f}")
+      plt.show()
+
+    return accuracy
 
 
 
