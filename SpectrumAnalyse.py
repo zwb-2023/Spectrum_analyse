@@ -169,7 +169,7 @@ def none(data):
 def pca(data):
     """PCA降维"""
     from sklearn.decomposition import PCA
-    pca = PCA(n_components=25)
+    pca = PCA(n_components=10)
     return pca.fit_transform(data)
 
 
