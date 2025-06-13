@@ -77,7 +77,7 @@ def plot_duplicate_data(category, split_datas, x, type='all'):
     plt.legend(sorted_handles, sorted_labels, loc='upper left', bbox_to_anchor=(1, 1))
     plt.show()
 
-def plot_duplicate_data_both(category, split_datas, x ):
+def plot_duplicate_data_both(category, split_datas, x , save=False ):
     import matplotlib.font_manager as fm
     # 设置中文显示
     plt.rcParams['font.sans-serif'] = ['SimHei']  # 选择合适的中文字体，这里使用了黑体作为示例
@@ -115,11 +115,15 @@ def plot_duplicate_data_both(category, split_datas, x ):
     sorted_labels_handles = sorted(set(zip(unique_labels, unique_handles)), key=lambda x: x[0])
     sorted_labels, sorted_handles = zip(*sorted_labels_handles)
     # 在右侧添加统一的图例
-    fig.legend(sorted_handles, sorted_labels, loc='upper left', bbox_to_anchor=(1, 1))
+    fig.legend(sorted_handles, sorted_labels)
+
+    if save :
+        plt.savefig('plot_duplicate_data.png')
 
     # 调整布局，使得图例不与图像重叠
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
+
 
 #——————————————————————预处理————————————————————————————
 
