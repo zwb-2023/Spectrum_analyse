@@ -125,6 +125,9 @@ def plot_duplicate_data_both(category, split_datas, x , save=False ):
     plt.show()
 
 
+from matplotlib.colors import Normalize
+from matplotlib import cm
+from matplotlib.cm import ScalarMappable
 
 def plot_regression_data_both(category, split_datas, x , save=False ):
     # 设置中文显示
