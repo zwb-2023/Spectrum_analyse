@@ -125,6 +125,58 @@ def plot_duplicate_data_both(category, split_datas, x , save=False ):
     plt.show()
 
 
+
+def plot_regression_data_both(category, split_datas, x , save=False ):
+    # 设置中文显示
+    plt.rcParams['font.sans-serif'] = ['SimHei']  # 选择合适的中文字体，这里使用了黑体作为示例
+    plt.rcParams['axes.unicode_minus'] = False  # 使负号能够正常显示
+    
+    # 计算 labels 对应的颜色
+    labels = [i for i in range(len(category))]  # 假设你的 labels 是基于 category 的索引
+    norm = Normalize(vmin=min(labels), vmax=max(labels))  # 归一化 labels 值
+    cmap = cm.get_cmap('Blues')  # 选择一个颜色渐变，'Greens' 是绿色渐变，你也可以选择其他渐变如 'Blues', 'Purples'
+
+    # 创建 1 行 2 列的子图
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    # 绘制 `mean` 类型的图像
+    for i in range(len(category)):
+        y = split_datas[i]
+        color = ScalarMappable(norm=norm, cmap=cmap).to_rgba(labels[i])  # 根据 labels 获取颜色
+        axes[0].plot(x, np.mean(y.transpose(), axis=1), color=color, label=category[i])
+
+    axes[0].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
+    axes[0].set_title('Mean of Reflectivity')  # 设置标题
+
+    # 绘制 `all` 类型的图像
+    for i in range(len(category)):
+        y = split_datas[i]
+        color = ScalarMappable(norm=norm, cmap=cmap).to_rgba(labels[i])  # 根据 labels 获取颜色
+        axes[1].plot(x, y.transpose(), color=color, label=category[i])
+
+    axes[1].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
+    axes[1].set_title('All of Reflectivity')  # 设置标题
+
+    # 合并相同名称和颜色的图例
+    handles, labels = plt.gca().get_legend_handles_labels()
+    unique_labels = set(labels)
+    unique_handles = [handles[labels.index(label)] for label in unique_labels]
+    
+    # 按标签顺序排序
+    sorted_labels_handles = sorted(set(zip(unique_labels, unique_handles)), key=lambda x: x[0])
+    sorted_labels, sorted_handles = zip(*sorted_labels_handles)
+    
+    # 在右侧添加统一的图例
+    fig.legend(sorted_handles, sorted_labels)
+
+    if save:
+        plt.savefig('plot_duplicate_data.png')
+
+    # 调整布局，使得图例不与图像重叠
+    plt.tight_layout()
+    plt.show()
+
+
 #——————————————————————预处理————————————————————————————
 
 
@@ -483,3 +535,73 @@ def leave_one_out_cross_validation(X, y, model):
     plt.show()
     
     return mean_accuracy
+
+
+
+### ——————————————————————————————回归————————————————————————————————
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from sklearn.cross_decomposition import PLSRegression
+from sklearn.metrics import mean_squared_error
+
+def pls_regression_plot(spectrum, labels, n_components=8, n_splits=5, random_state=42, save=False):
+    """
+    使用PLS回归模型进行五折交叉验证，计算均方误差并绘制预测值与实际标签的关系图。
+
+    Parameters:
+    - spectrum: 光谱数据，numpy数组
+    - labels: 标签数据，numpy数组
+    - n_components: PLS回归模型的主成分数目，默认为8
+    - n_splits: KFold交叉验证的折数，默认为5
+    - random_state: 随机种子，默认为42
+    - save: 是否保存图像，默认为False
+    """
+    # 设置PLS回归模型
+    pls = PLSRegression(n_components=n_components)
+
+    # 定义KFold交叉验证
+    cv = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+
+    # 存储每个折叠的预测值和实际标签
+    predictions = []
+    true_labels = []
+
+    # 遍历每个折叠
+    for train_index, test_index in cv.split(spectrum, labels):
+        # 分割数据
+        X_train, X_test = spectrum[train_index], spectrum[test_index]
+        y_train, y_test = labels[train_index], labels[test_index]
+        
+        # 训练模型
+        pls.fit(X_train, y_train)
+        
+        # 预测
+        y_pred = pls.predict(X_test)
+        
+        # 存储预测和真实标签
+        predictions.append(y_pred)
+        true_labels.append(y_test)
+
+    # 将结果转换为numpy数组
+    predictions = np.concatenate(predictions)
+    true_labels = np.concatenate(true_labels)
+
+    # 计算均方误差
+    mse = mean_squared_error(true_labels, predictions)
+    print(f"均方误差: {mse}")
+
+    # 绘制预测值与实际标签的关系图
+    plt.figure(figsize=(8, 6))
+    plt.scatter(true_labels, predictions, color='blue', label='预测值 vs 实际值')
+    plt.plot([min(true_labels), max(true_labels)], [min(true_labels), max(true_labels)], 'r--', label="理想线")
+    plt.xlabel('实际标签')
+    plt.ylabel('预测标签')
+    plt.title('PLS回归预测结果（五折交叉验证）')
+    plt.legend()
+
+    if save:
+        plt.savefig('pls_regression_result.png')
+
+    plt.show()
