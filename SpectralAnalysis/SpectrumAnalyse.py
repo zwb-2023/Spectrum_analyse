@@ -233,23 +233,101 @@ def pca(data):
 
 
 #————————————————————————计算差异性——————————————————————————————
-# 计算光谱角（Spectral Angle）
-def spectral_angle(spectrum_array):
-    """计算所有样本光谱之间的光谱角，并返回其平均值"""
-    num_samples = spectrum_array.shape[0]
-    spectral_angles = np.zeros((num_samples, num_samples))  # 存储每对光谱的角度
+import numpy as np
+from scipy.spatial.distance import pdist, squareform
+from sklearn.covariance import MinCovDet
 
-    for i in range(num_samples):
-        for j in range(i + 1, num_samples):
-            dot_product = np.dot(spectrum_array[i], spectrum_array[j])
-            norm_spectrum1 = np.linalg.norm(spectrum_array[i])
-            norm_spectrum2 = np.linalg.norm(spectrum_array[j])
-            angle = np.arccos(dot_product / (norm_spectrum1 * norm_spectrum2))
-            spectral_angles[i, j] = angle
-            spectral_angles[j, i] = angle
+def calculate_spectral_distances(spectral_data, epsilon=1e-12):
+    """
+    计算光谱曲线之间的平均光谱角、欧氏距离、马氏距离和光谱信息散度(SID)
     
-    return spectral_angles  # 返回光谱角的平均值
+    参数:
+    spectral_data (np.ndarray): 形状为(n_samples, n_bands)的光谱数据矩阵
+    epsilon (float): 防止数值计算错误的小值
+    
+    返回:
+    dict: 包含四种距离平均值的字典
+    """
+    n = spectral_data.shape[0]
+    
+    # 0. 预处理：将光谱转换为概率分布 (用于SID计算)
+    # 添加epsilon防止除零错误，并确保所有值为正
+    spectral_prob = spectral_data + epsilon
+    # 归一化每条光谱，使其和为1 (转换为概率分布)
+    spectral_prob = spectral_prob / spectral_prob.sum(axis=1, keepdims=True)
+    
+    # 1. 计算平均光谱角 (SAM)
+    sam_values = []
+    sid_values = []
+    
+    for i in range(n):
+        for j in range(i+1, n):
+            # 计算两条光谱之间的光谱角 (SAM)
+            dot_product = np.dot(spectral_data[i], spectral_data[j])
+            norm_i = np.linalg.norm(spectral_data[i])
+            norm_j = np.linalg.norm(spectral_data[j])
+            # 避免除零错误
+            if norm_i > 0 and norm_j > 0:
+                cos_theta = dot_product / (norm_i * norm_j)
+                # 将余弦值限制在[-1,1]范围内防止数值误差
+                cos_theta = np.clip(cos_theta, -1.0, 1.0)
+                sam_rad = np.arccos(cos_theta)
+                sam_values.append(sam_rad)
+            
+            # 计算光谱信息散度 (SID)
+            p = spectral_prob[i]
+            q = spectral_prob[j]
+            
+            # 计算KL散度 D(p||q) 和 D(q||p)
+            # 使用对数避免数值下溢，添加epsilon防止log(0)
+            kl_pq = np.sum(p * np.log((p + epsilon) / (q + epsilon)))
+            kl_qp = np.sum(q * np.log((q + epsilon) / (p + epsilon)))
+            
+            # SID是对称版本：SID(p,q) = D(p||q) + D(q||p)
+            sid = kl_pq + kl_qp
+            sid_values.append(sid)
+    
+    # 将SAM弧度转换为角度 (可选)
+    sam_values_deg = np.rad2deg(sam_values) if sam_values else np.array([])
+    avg_sam = np.mean(sam_values_deg) if sam_values_deg.size > 0 else 0.0
+    avg_sid = np.mean(sid_values) if sid_values else 0.0
+    
+    # 2. 计算平均欧氏距离 (ED)
+    ed_matrix = pdist(spectral_data, 'euclidean')
+    avg_ed = np.mean(ed_matrix) if ed_matrix.size > 0 else 0.0
+    
 
+    return {
+        'average_sam_degrees': avg_sam,
+        'average_euclidean_distance': avg_ed,
+        'average_spectral_divergence': avg_sid
+    }
+
+# ================= 示例用法 =================
+if __name__ == "__main__":
+    # 生成模拟光谱数据 (100条光谱，每条200个波段)
+    np.random.seed(42)
+    spectral_data = np.random.rand(100, 200) * 0.8 + 0.1  # 值域[0.1, 0.9]
+    
+    # 添加一些异常值以测试鲁棒性
+    spectral_data[10] += 0.5  # 异常光谱1
+    spectral_data[45] *= 1.8  # 异常光谱2
+    
+    # 计算距离
+    results = calculate_spectral_distances(spectral_data)
+    
+    # 打印结果
+    print("光谱差异性分析结果:")
+    print(f"平均光谱角 (SAM): {results['average_sam_degrees']:.2f} 度")
+    print(f"平均欧氏距离 (ED): {results['average_euclidean_distance']:.4f}")
+    print(f"平均光谱信息散度 (SID): {results['average_spectral_divergence']:.4f}")
+    
+    # 解释性输出
+    print("\n结果解读:")
+    print(f"- 平均光谱角 {results['average_sam_degrees']:.2f}° 表示光谱曲线间的平均角度差异")
+    print(f"- 欧氏距离 ({results['average_euclidean_distance']:.4f}) 反映光谱幅度的绝对差异")
+    print(f"- 光谱信息散度 ({results['average_spectral_divergence']:.4f}) 衡量光谱分布的信息差异")
+    
 # 计算均方差（Mean Squared Error, MSE）
 def mean_squared_error(spectrum_array):
     """计算所有样本光谱之间的均方差，并返回其平均值"""
@@ -263,12 +341,6 @@ def mean_squared_error(spectrum_array):
             mse_values[j, i] = mse
     
     return mse_values  # 返回均方差的平均值
-
-# 计算变异系数（Coefficient of Variation, CV）
-def coefficient_of_variation(spectrum_array):
-    """计算所有样本光谱的变异系数，并返回其平均值"""
-    cv_values = np.array([np.std(spectrum) / np.mean(spectrum) if np.mean(spectrum) != 0 else 0 for spectrum in spectrum_array])
-    return cv_values # 返回变异系数的平均值
 
 
 
