@@ -107,25 +107,23 @@ def split_roi(x1, y1, x2, y2 , rows = 5, columns = 2 ) :  # 计算子矩形框�
       sub_boxes.append((sub_x1, sub_y1, sub_x2, sub_y2))
   return sub_boxes
 
-def get_spectral_Threshold( rois , msi  , labels , show_roi = False) : 
-    #输入ROI文件和一张原始光谱数据，和想要的roilabels，能够得出阈值分隔出roi内部的光谱
-    roi_list = []
-    for roi in rois :
-        if labels == roi[0] :
-            x = int(np.array(msi.shape[1]*float(roi[1])))
-            y = int(np.array(msi.shape[0]*float(roi[2])))
-
-            w = int(np.array(msi.shape[1]*float(roi[3])))
-            h = int(np.array(msi.shape[0]*float(roi[4])))
-
-            roi_list.append([x,y,w,h])
+def get_spectral_Threshold( rois , msi  , show_roi = False) : 
 
     spectrum = []
-    for roi in roi_list:
-        x1 = roi[0]
-        y1 = roi[1]
-        x2 = roi[0] + roi[2]
-        y2 = roi[1] + roi[3]
+    labels = []
+
+    for roi in rois :
+        label = roi[0] 
+        x = int(np.array(msi.shape[1]*float(roi[1])))
+        y = int(np.array(msi.shape[0]*float(roi[2])))
+        w = int(np.array(msi.shape[1]*float(roi[3])))
+        h = int(np.array(msi.shape[0]*float(roi[4])))
+
+
+        x1 = x
+        y1 = y
+        x2 = x + w
+        y2 = y + h
 
 
         img = msi[y1:y2, x1:x2, 300]
@@ -145,6 +143,7 @@ def get_spectral_Threshold( rois , msi  , labels , show_roi = False) :
         mask_bool = mask.astype(bool)
         
         if show_roi : 
+            plt.figure()
             plt.imshow(mask)
 
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)    
@@ -160,11 +159,17 @@ def get_spectral_Threshold( rois , msi  , labels , show_roi = False) :
                 values.append(np.mean(flattened_msi[mask2]))
             average_spectral_values.append(values)
 
-    spectrum.append(average_spectral_values)
-    spectrum = np.array(spectrum).reshape(-1,512)
 
+        average_spectral_values = np.array(average_spectral_values)
+        
+        labels.append([label] * average_spectral_values.shape[0])
+        spectrum.append(average_spectral_values)
+        
 
-    return spectrum
+    spectrum = np.concatenate(spectrum)
+    labels = np.concatenate(labels)
+  
+    return spectrum, labels
 
 def get_reflect_line_sweep(msi, baiban_path  , show = False) : # 线扫相机通过大白板进行反射率校正 , 仅仅输入白板横轴
     reflect = np.zeros(msi.shape)
