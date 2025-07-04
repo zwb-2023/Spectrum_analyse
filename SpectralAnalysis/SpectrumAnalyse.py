@@ -125,59 +125,62 @@ def plot_duplicate_data_both(category, split_datas, x , save=False ):
     plt.show()
 
 
-from matplotlib.colors import Normalize
-from matplotlib import cm
-from matplotlib.cm import ScalarMappable
+#####------------------回归绘图-------------------------------
 
-def plot_regression_data_both(category, split_datas, x , save=False ):
-    # 设置中文显示
-    plt.rcParams['font.sans-serif'] = ['SimHei']  # 选择合适的中文字体，这里使用了黑体作为示例
-    plt.rcParams['axes.unicode_minus'] = False  # 使负号能够正常显示
-    
-    # 计算 labels 对应的颜色
-    labels = [i for i in range(len(category))]  # 假设你的 labels 是基于 category 的索引
-    norm = Normalize(vmin=min(labels), vmax=max(labels))  # 归一化 labels 值
-    cmap = cm.get_cmap('Blues')  # 选择一个颜色渐变，'Greens' 是绿色渐变，你也可以选择其他渐变如 'Blues', 'Purples'
+import PIL
+import matplotlib as mpl
+from PIL.Image import Image
+from PIL.ImageDraw import ImageDraw
+from PIL.ImageFont import ImageFont
+from matplotlib import pyplot as plt
+from sklearn.metrics import confusion_matrix, classification_report
+import matplotlib.patches as mpatches
+import numpy as np
+import cv2 as cv
 
-    # 创建 1 行 2 列的子图
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+# 字体可能不同电脑有差异，根据自己的电脑调整，确保能显示中文
+# plt.rcParams['font.sans-serif'] = ['Heiti TC']  # 步骤一（替换sans-serif字体）
+plt.rcParams['font.sans-serif'] = ['SimHei']  # 步骤一（替换sans-serif字体）
+plt.rcParams['axes.unicode_minus'] = False  # 步骤二（解决坐标轴负数的负号显示问题）
+# plt.rcParams['font.family'] = ['Heiti TC']
+plt.rcParams['font.family'] = ['SimHei']
 
-    # 绘制 `mean` 类型的图像
-    for i in range(len(category)):
-        y = split_datas[i]
-        color = ScalarMappable(norm=norm, cmap=cmap).to_rgba(labels[i])  # 根据 labels 获取颜色
-        axes[0].plot(x, np.mean(y.transpose(), axis=1), color=color, label=category[i])
+DPI = 256
 
-    axes[0].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
-    axes[0].set_title('Mean of Reflectivity')  # 设置标题
 
-    # 绘制 `all` 类型的图像
-    for i in range(len(category)):
-        y = split_datas[i]
-        color = ScalarMappable(norm=norm, cmap=cmap).to_rgba(labels[i])  # 根据 labels 获取颜色
-        axes[1].plot(x, y.transpose(), color=color, label=category[i])
+def _get_regre_colormap(labels):
+    cmaps = mpl.cm.jet
+    if len(np.unique(labels)) < 3:
+        norm1 = mpl.colors.Normalize(vmin=np.min(labels) * 0.9, vmax=np.max(labels) * 1.1)
+    else:
+        norm1 = mpl.colors.Normalize(vmin=np.min(labels), vmax=np.max(labels))
+    mappable = mpl.cm.ScalarMappable(norm=norm1, cmap=cmaps)
+    return mappable
 
-    axes[1].set(xlabel='Wavelength(nm)', ylabel='Reflectivity')
-    axes[1].set_title('All of Reflectivity')  # 设置标题
-
-    # 合并相同名称和颜色的图例
-    handles, labels = plt.gca().get_legend_handles_labels()
-    unique_labels = set(labels)
-    unique_handles = [handles[labels.index(label)] for label in unique_labels]
-    
-    # 按标签顺序排序
-    sorted_labels_handles = sorted(set(zip(unique_labels, unique_handles)), key=lambda x: x[0])
-    sorted_labels, sorted_handles = zip(*sorted_labels_handles)
-    
-    # 在右侧添加统一的图例
-    fig.legend(sorted_handles, sorted_labels)
-
-    if save:
-        plt.savefig('plot_duplicate_data.png')
-
-    # 调整布局，使得图例不与图像重叠
-    plt.tight_layout()
-    plt.show()
+def show_specs_regre(spec_pos, specs, labels, title='光谱分布'):
+    """
+    展示回归任务的光谱分布
+    @param spec_pos: 光谱波长坐标；
+    @param specs: 光谱数据，形状为[n,spec]
+    @param labels: 标签数据，形状为[n]
+    @param title: 图表标题
+    @return: np.ndarray，光谱分布图
+    """
+    if len(specs.shape) < 2:
+        specs = specs.reshape((1, -1))
+        labels = labels.reshape((1, -1))
+    mappable = _get_regre_colormap(labels)
+    fig, ax = plt.subplots(figsize=(5, 4), dpi=DPI)
+    for spec, lb in zip(specs, labels):
+        color = mappable.to_rgba(lb)
+        plt.plot(spec_pos, spec, linewidth=1, c=color, alpha=0.5)
+    plt.title(title)
+    fig.colorbar(
+        mappable, orientation='vertical', ax=ax,
+        ticks=np.linspace(np.min(labels), np.max(labels), 10),
+        label='指标分布'
+    )
+    return 
 
 
 #——————————————————————预处理————————————————————————————
