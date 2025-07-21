@@ -624,7 +624,7 @@ from sklearn.model_selection import KFold
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.metrics import mean_squared_error
 
-def pls_regression_plot(spectrum, labels, n_components=8, n_splits=5, random_state=42, save=False):
+def pls_regression_plot(spectrum, labels, n_components=8, n_splits=5, random_state=42, save=False , show = True):
     """
     使用PLS回归模型进行五折交叉验证，计算均方误差并绘制预测值与实际标签的关系图。
 
@@ -668,18 +668,75 @@ def pls_regression_plot(spectrum, labels, n_components=8, n_splits=5, random_sta
 
     # 计算均方误差
     mse = mean_squared_error(true_labels, predictions)
-    print(f"均方误差: {mse}")
 
-    # 绘制预测值与实际标签的关系图
-    plt.figure(figsize=(8, 6))
-    plt.scatter(true_labels, predictions, color='blue', label='预测值 vs 实际值')
-    plt.plot([min(true_labels), max(true_labels)], [min(true_labels), max(true_labels)], 'r--', label="理想线")
-    plt.xlabel('实际标签')
-    plt.ylabel('预测标签')
-    plt.title('PLS回归预测结果（五折交叉验证）')
-    plt.legend()
 
-    if save:
-        plt.savefig('pls_regression_result.png')
+    if show:
+        # 绘制预测值与实际标签的关系图
+        plt.figure(figsize=(8, 6))
+        plt.scatter(true_labels, predictions, color='blue', label='预测值 vs 实际值')
+        plt.plot([min(true_labels), max(true_labels)], [min(true_labels), max(true_labels)], 'r--', label="理想线")
+        plt.xlabel('实际标签')
+        plt.ylabel('预测标签')
+        plt.title('PLS回归预测结果（五折交叉验证）')
+        plt.legend()
 
-    plt.show()
+        if save:
+            plt.savefig('pls_regression_result.png')
+
+        plt.show()
+
+    return mse
+
+
+from sklearn.metrics import mean_squared_error, r2_score
+
+def k_fold_cross_validation_regression(X, y, model, n_splits=5, random_state=42, show=True):
+    """
+    使用五折交叉验证训练模型，并评估回归模型。
+    
+    参数:
+    X : numpy array
+        特征矩阵 (n_samples, n_features)
+    y : numpy array or list
+        标签对应的特征矩阵
+    model : sklearn model
+        要训练的机器学习回归模型
+    n_splits : int
+        交叉验证的折数，默认为5
+    """
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    Y_pred = []
+    Y_test = []
+
+    # 进行五折交叉验证
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X[train_index], X[test_index]
+        y_train, y_test = y[train_index], y[test_index]
+
+        # 训练模型
+        model.fit(X_train, y_train)
+
+        # 预测
+        y_pred = model.predict(X_test)
+
+        # 汇总结果
+        Y_pred.extend(y_pred)
+        Y_test.extend(y_test)
+
+    # 计算回归模型的评估指标
+    mse = mean_squared_error(Y_test, Y_pred)  # 均方误差
+    r2 = r2_score(Y_test, Y_pred)  # R^2 得分
+
+    if show:
+
+        # 绘制预测值与实际标签的关系图
+        plt.figure(figsize=(8, 6))
+        plt.scatter(Y_test, Y_pred, color='blue', label='预测值 vs 实际值')
+        plt.plot([min(Y_test), max(Y_test)], [min(Y_test), max(Y_test)], 'r--', label="理想线")
+        plt.xlabel('实际标签')
+        plt.ylabel('预测标签')
+        plt.title('PLS回归预测结果（五折交叉验证）')
+        plt.legend()
+
+
+    return mse, r2
