@@ -495,7 +495,7 @@ def plot_selected_features(wavelength, spectrum , selected_features, best_scores
 
 from sklearn.model_selection import KFold
 from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
-def k_fold_cross_validation(X, y, model, n_splits=5 , random_state = 42 , show = True):
+def k_fold_cross_validation(X, y, model, n_splits=5 , random_state=42 , show=True):
     """
     使用五折交叉验证训练模型，并绘制混淆矩阵。
     
@@ -509,7 +509,7 @@ def k_fold_cross_validation(X, y, model, n_splits=5 , random_state = 42 , show =
     n_splits : int
         交叉验证的折数，默认为5
     """
-    kf = KFold(n_splits=n_splits, shuffle=True, random_state = random_state)
+    kf = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     Y_pred = []
     Y_test = []
 
@@ -531,17 +531,30 @@ def k_fold_cross_validation(X, y, model, n_splits=5 , random_state = 42 , show =
     accuracy = accuracy_score(Y_test, Y_pred)
 
     if show:
-      # 计算混淆矩阵
-      cm = confusion_matrix(Y_test, Y_pred)
+        # 计算混淆矩阵
+        cm = confusion_matrix(Y_test, Y_pred)
 
-      # 获取唯一的标签
-      unique_labels = np.unique(y)
+        # 获取唯一的标签
+        unique_labels = np.unique(y)
 
-      # 绘制混淆矩阵
-      disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
-      disp.plot(cmap=plt.cm.Blues)
-      plt.title(f"Accuracy: {accuracy:.2f}")
-      plt.show()
+        # 绘制混淆矩阵
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=unique_labels)
+        disp.plot(cmap=plt.cm.Blues)
+
+        # 计算它们的迭代位置
+        iters = np.reshape([[[i, j] for j in range(cm.shape[1])] for i in range(cm.shape[0])], (cm.size, 2))
+
+        # 计算每个单元格的百分比
+        cm_percentage = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 100
+        # 显示数字和百分比
+        for i, j in iters:
+            if (i == j):
+                plt.text(j, i + 0.12, f'{cm_percentage[i, j]:.0f}%', va='center', ha='left', fontsize=10, color='red')  # 显示百分比
+            else:
+                plt.text(j, i + 0.12, f'{cm_percentage[i, j]:.0f}%', va='center', ha='left', fontsize=10, color='red')  # 显示百分比
+
+        plt.title(f"Accuracy: {accuracy:.2f}")
+        plt.show()
 
     return accuracy
 
