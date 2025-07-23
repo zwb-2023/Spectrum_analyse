@@ -171,6 +171,82 @@ def get_spectral_Threshold( rois , msi  , show_roi = False) :
   
     return spectrum, labels
 
+
+
+def get_spectral_Threshold_all(rois, msi, show_roi=False):
+    """
+    Extracts spectral data from regions of interest (ROIs) in a hyperspectral image using thresholding.
+
+    Parameters:
+    rois (list of lists): A list of ROIs, where each ROI is represented as [label, x, y, w, h].
+    msi (numpy.ndarray): The hyperspectral image from which to extract spectral data.
+    show_roi (bool): If True, display the original image and the mask for each ROI.
+
+    Returns:
+    numpy.ndarray: An array of spectral data for each ROI.
+    list: A list of labels corresponding to each ROI.
+    """
+    
+    spectrum = []
+    labels = []
+
+    for roi in rois:
+        label = roi[0]
+        x = int(msi.shape[1] * float(roi[1]))
+        y = int(msi.shape[0] * float(roi[2]))
+        w = int(msi.shape[1] * float(roi[3]))
+        h = int(msi.shape[0] * float(roi[4]))
+
+        x1 = x
+        y1 = y
+        x2 = x + w
+        y2 = y + h
+
+        # Extract the region of interest from the hyperspectral image
+        img = msi[y1:y2, x1:x2, -10]
+        min_val = np.min(img)
+        max_val = np.max(img)
+
+        # Convert the image to 8-bit grayscale
+        converted_image = (img - min_val) * (255 / (max_val - min_val))
+        converted_image = np.clip(converted_image, 0, 255)
+        converted_image = converted_image.astype(np.uint8)
+
+        # Apply thresholding to create a mask
+        _, mask = cv2.threshold(converted_image, 35, 255, cv2.THRESH_BINARY)
+
+        # Perform morphological operations to refine the mask
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+        mask = cv2.dilate(mask, kernel)
+        mask = cv2.erode(mask, kernel)
+        mask_bool = mask.astype(bool)
+
+        # Optionally display the original image and the mask
+        if show_roi:
+            plt.figure()
+            plt.imshow(converted_image)
+            plt.figure()
+            plt.imshow(mask_bool)
+
+        # Calculate the average spectral values for each band in the ROI
+        values = []
+        shape = msi[y1:y2, x1:x2, :].shape
+        for i in range(msi.shape[2]):
+            flattened_msi = msi[y1:y2, x1:x2, i].reshape(shape[0], shape[1])
+            values.append(np.mean(flattened_msi[mask_bool]))
+
+        values = np.array(values)
+
+        # Append the label and spectral values to their respective lists
+        labels.append(label)
+        spectrum.append(values)
+
+    # Convert the lists to numpy arrays
+    spectrum = np.array(spectrum)
+
+    return spectrum, labels
+
+
 def get_reflect_line_sweep(msi, baiban_path  , show = False) : # 线扫相机通过大白板进行反射率校正 , 仅仅输入白板横轴
     reflect = np.zeros(msi.shape)
     baiban_msi = spectral.open_image(baiban_path).load()
